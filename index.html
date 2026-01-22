@@ -1,13 +1,15 @@
+
 <!DOCTYPE html>
 <html lang="mn">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SIS Agent - Таны бизнесийн үнэнч туслагч</title>
+    <title>SIS Agent - Бизнесийн ухаалаг систем</title>
+    <meta name="description" content="10 жилийн туршлагатай ERP, AI Chat, болон Хүргэлтийн нэгдсэн систем. Таны бизнесийг дараагийн шатанд гаргана." />
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script>
       tailwind.config = {
         theme: {
@@ -17,16 +19,8 @@
             },
             colors: {
               brand: {
-                50: '#eff6ff',
-                100: '#dbeafe',
-                200: '#bfdbfe',
-                300: '#93c5fd',
-                400: '#60a5fa',
-                500: '#3b82f6',
-                600: '#2563eb',
-                700: '#1d4ed8',
-                800: '#1e40af',
-                900: '#1e3a8a',
+                50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd', 400: '#60a5fa',
+                500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a',
               }
             }
           }
@@ -34,18 +28,8 @@
       }
     </script>
     <style>
-      html {
-        scroll-behavior: smooth;
-      }
-      body {
-        background-color: #f8fafc;
-        color: #0f172a;
-      }
-      .glass-nav {
-        background: rgba(255, 255, 255, 0.8);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-      }
+      html { scroll-behavior: smooth; }
+      body { background-color: #f8fafc; color: #0f172a; -webkit-font-smoothing: antialiased; }
     </style>
   <script type="importmap">
 {
@@ -55,10 +39,10 @@
     "react/": "https://aistudiocdn.com/react@^19.2.0/",
     "framer-motion": "https://aistudiocdn.com/framer-motion@^12.23.24",
     "lucide-react": "https://aistudiocdn.com/lucide-react@^0.553.0",
+    "@google/genai": "https://esm.sh/@google/genai@^1.38.0",
     "@react-three/fiber": "https://esm.sh/@react-three/fiber@^9.5.0",
-    "three": "https://esm.sh/three@^0.182.0",
     "@react-three/drei": "https://esm.sh/@react-three/drei@^10.7.7",
-    "@google/genai": "https://esm.sh/@google/genai@^1.38.0"
+    "three": "https://esm.sh/three@^0.182.0"
   }
 }
 </script>
