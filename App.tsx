@@ -23,29 +23,29 @@ import {
   Phone,
   Sparkles,
   Send,
-  Loader2
+  Loader2,
+  ExternalLink
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GoogleGenAI } from "@google/genai";
 
-// --- System Instruction for AI ---
-const SIS_SYSTEM_INSTRUCTION = `
+// --- System Instruction for SIS AI Agent ---
+const SIS_SYSTEM_PROMPT = `
 Та бол "SIS Agent" (Smart Information System) компанийн албан ёсны ухаалаг туслах юм. 
-Байгууллагын мэдээлэл:
-- Туршлага: 10 жил тасралтгүй ERP болон цахим худалдааны платформ хөгжүүлсэн.
-- Давуу тал: Facebook Messenger AI Agent (захиалга үүсгэдэг), Comment-to-Order AI, CallPro интеграц, POS систем, Агуулахын удирдлага.
-- Хүргэлт: "Очлоо" хүргэлтийн сүлжээ. Хотыг 87 бүсэд хуваасан, 110 гаруй хүргэлтийн ажилтантай. Хүргэлтийн чанар 97%.
+Байгууллагын үндсэн мэдээлэл:
+- Туршлага: 10 жил тасралтгүй ERP, агуулахын систем болон цахим худалдааны платформ хөгжүүлсэн.
+- Давуу тал: Facebook Messenger AI Agent (захиалга автоматаар авдаг), Comment-to-Order AI (комментоор дугаар бүртгэж захиалга үүсгэдэг), CallPro интеграц, POS систем, Агуулахын бүрэн удирдлага.
+- Хүргэлт: "Очлоо" хүргэлтийн сүлжээ. Хотыг 87 бүсэд хуваасан, 110 гаруй хүргэлтийн ажилтантай. Хүргэлтийн амжилт 97%.
 - Үнийн санал (4 шатлалт): 
-  1. Үнэгүй (Хүргэлт хэрэглэгчдэд)
-  2. Үндсэн (Хүргэлт, бараа бүртгэл, санхүү - Уян хатан үнэтэй)
-  3. Дижитал (Вэб сайт, линк захиалга нэмэгдэнэ)
-  4. Про (AI Chat, CallPro, Дугаар бүртгэл цогц систем)
-- Бусад бүтээгдэхүүн: Ochloo app, Drive app, emall.mn.
+  1. Үнэгүй - Хүргэлтийн үйлчилгээ авах хэрэглэгчдэд.
+  2. Үндсэн - Хүргэлтийн модуль + Бараа бүртгэл + Санхүү.
+  3. Дижитал - Вэб сайт + Линк захиалгын систем.
+  4. Про - AI Chat + CallPro + Оператор хяналтын цогц систем.
 
-Таны үүрэг: Хэрэглэгчийн асуултанд найрсаг, мэргэжлийн түвшинд, Монгол хэлээр хариулж, тэдэнд тохирох шийдлийг санал болгох. Хариултаа товч бөгөөд тодорхой байлгаарай.
+Хэрэглэгч асуулт асуухад найрсаг, мэргэжлийн түвшинд, Монгол хэлээр хариулна уу. Хэрэв үнэ болон бүртгэлийн талаар асуувал "Үнийн санал" болон "Холбоо барих" хэсгээс дэлгэрэнгүй харахыг зөвлөөрэй.
 `;
 
-// --- Components ---
+// --- UI Components ---
 
 const Modal = ({ isOpen, onClose, title, children }: { isOpen: boolean, onClose: () => void, title: string, children?: React.ReactNode }) => (
   <AnimatePresence>
@@ -66,11 +66,11 @@ const Modal = ({ isOpen, onClose, title, children }: { isOpen: boolean, onClose:
         >
           <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
             <h3 className="text-2xl font-black text-slate-900">{title}</h3>
-            <button onClick={onClose} className="p-2 hover:bg-white rounded-full transition-colors">
+            <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
               <X size={24} />
             </button>
           </div>
-          <div className="p-8">
+          <div className="p-8 max-h-[70vh] overflow-y-auto">
             {children}
           </div>
         </motion.div>
@@ -101,7 +101,7 @@ const FeatureCard = ({ icon: Icon, title, desc, delay = 0 }: { icon: any, title:
       <Icon size={28} />
     </div>
     <h3 className="text-xl font-bold text-slate-900 mb-4">{title}</h3>
-    <p className="text-slate-600 leading-relaxed text-sm">{desc}</p>
+    <p className="text-slate-600 leading-relaxed text-sm font-medium">{desc}</p>
   </motion.div>
 );
 
@@ -136,7 +136,7 @@ const PricingCard = ({ stage, title, features, isPopular, priceInfo, onAction }:
   </div>
 );
 
-// --- Main App ---
+// --- Main App Component ---
 
 const App: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -188,11 +188,11 @@ const App: React.FC = () => {
     const apiKey = process.env.API_KEY;
 
     if (!apiKey) {
-        setTimeout(() => {
-            setDemoMessages(prev => [...prev, { role: 'ai', text: "Уучлаарай, системийн тохиргоо (API Key) дутуу байна. Та түр хүлээгээд дахин оролдоно уу эсвэл админтай холбогдоно уу." }]);
-            setIsTyping(false);
-        }, 1000);
-        return;
+      setTimeout(() => {
+        setDemoMessages(prev => [...prev, { role: 'ai', text: "Уучлаарай, системийн тохиргоо (API Key) дутуу байна. Та Vercel Settings хэсэгт API_KEY тохируулна уу." }]);
+        setIsTyping(false);
+      }, 1000);
+      return;
     }
 
     try {
@@ -204,23 +204,23 @@ const App: React.FC = () => {
           parts: [{ text: m.text }]
         })), { role: 'user', parts: [{ text: userText }] }],
         config: {
-          systemInstruction: SIS_SYSTEM_INSTRUCTION,
-          maxOutputTokens: 500,
+          systemInstruction: SIS_SYSTEM_PROMPT,
+          maxOutputTokens: 800,
           temperature: 0.7,
         }
       });
 
-      const aiText = response.text || "Уучлаарай, систем хариу өгөхөд алдаа гарлаа.";
+      const aiText = response.text || "Уучлаарай, систем хариу өгөхөд алдаа гарлаа. Та дахин бичнэ үү.";
       setDemoMessages(prev => [...prev, { role: 'ai', text: aiText }]);
     } catch (error) {
-      console.error("AI Chat Error:", error);
-      setDemoMessages(prev => [...prev, { role: 'ai', text: "Уучлаарай, холболтонд алдаа гарлаа. Та дараа дахин хандана уу." }]);
+      console.error("AI Error:", error);
+      setDemoMessages(prev => [...prev, { role: 'ai', text: "Холболтонд алдаа гарлаа. Та дараа дахин оролдоно уу." }]);
     } finally {
       setIsTyping(false);
     }
   };
 
-  const handleModalSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setActiveModal('success');
   };
@@ -244,7 +244,7 @@ const App: React.FC = () => {
             <NavItem label="Давуу тал" href="#features" onClick={() => scrollTo('features')} />
             <NavItem label="Үнийн санал" href="#pricing" onClick={() => scrollTo('pricing')} />
             <NavItem label="Туршиж үзэх" href="#demo" onClick={() => scrollTo('demo')} />
-            <NavItem label="Хамтын ажиллагаа" href="#partner" onClick={() => scrollTo('partner')} />
+            <NavItem label="Түншлэл" href="#partner" onClick={() => scrollTo('partner')} />
             <button 
               onClick={() => setActiveModal('contact')}
               className="bg-slate-900 text-white px-8 py-3 rounded-2xl font-bold hover:bg-brand-600 transition-all shadow-xl shadow-slate-200 text-sm active:scale-95"
@@ -259,29 +259,27 @@ const App: React.FC = () => {
         </div>
       </nav>
 
-      {/* Mobile Menu Overlay */}
+      {/* Mobile Menu */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div 
             initial={{ opacity: 0, x: '100%' }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed inset-0 z-[90] bg-white flex flex-col p-8 pt-32 gap-8"
+            className="fixed inset-0 z-[150] bg-white flex flex-col p-8 pt-32 gap-8"
           >
-            <NavItem label="Нүүр хуудас" href="#home" onClick={() => scrollTo('home')} />
+            <NavItem label="Нүүр" href="#home" onClick={() => scrollTo('home')} />
             <NavItem label="Давуу тал" href="#features" onClick={() => scrollTo('features')} />
             <NavItem label="Үнийн санал" href="#pricing" onClick={() => scrollTo('pricing')} />
             <NavItem label="Туршиж үзэх" href="#demo" onClick={() => scrollTo('demo')} />
-            <NavItem label="Хамтын ажиллагаа" href="#partner" onClick={() => scrollTo('partner')} />
-            <button onClick={() => setActiveModal('contact')} className="bg-brand-600 text-white py-5 rounded-[1.5rem] font-bold text-lg shadow-lg">Холбоо барих</button>
+            <button onClick={() => setActiveModal('contact')} className="bg-brand-600 text-white py-5 rounded-2xl font-bold text-lg shadow-lg">Холбоо барих</button>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Modals */}
-      <Modal isOpen={!!activeModal && activeModal !== 'success'} onClose={() => setActiveModal(null)} title={activeModal === 'contact' ? 'Холбоо барих' : 'Бүртгүүлэх'}>
-        <form className="space-y-6" onSubmit={handleModalSubmit}>
+      <Modal isOpen={!!activeModal && activeModal !== 'success'} onClose={() => setActiveModal(null)} title={activeModal === 'contact' ? 'Холбоо барих' : 'Эхлэх хүсэлт'}>
+        <form className="space-y-6" onSubmit={handleFormSubmit}>
           <div className="space-y-2">
             <label className="text-sm font-bold text-slate-600 uppercase tracking-wider">Таны нэр</label>
             <input required type="text" className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all" placeholder="Овог нэр..." />
@@ -292,7 +290,7 @@ const App: React.FC = () => {
           </div>
           <div className="space-y-2">
             <label className="text-sm font-bold text-slate-600 uppercase tracking-wider">Мэдээлэл</label>
-            <textarea className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all h-32 resize-none" placeholder="Таны сонирхож буй үйлчилгээ..."></textarea>
+            <textarea className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all h-32 resize-none" placeholder="Таны хүсэлт эсвэл сонирхож буй үйлчилгээ..."></textarea>
           </div>
           <button type="submit" className="w-full bg-brand-600 text-white py-5 rounded-2xl font-black text-lg shadow-xl shadow-brand-200 hover:bg-brand-700 active:scale-95 transition-all">Илгээх</button>
         </form>
@@ -304,8 +302,8 @@ const App: React.FC = () => {
             <CheckCircle2 size={48} />
           </div>
           <div className="space-y-2">
-            <h4 className="text-2xl font-black text-slate-900">Хүсэлт илгээгдлээ</h4>
-            <p className="text-slate-500 font-medium">Бид тантай тун удахгүй холбогдох болно. Баярлалаа!</p>
+            <h4 className="text-2xl font-black text-slate-900">Хүсэлт хүлээн авлаа</h4>
+            <p className="text-slate-500 font-medium">Манай ажилтан тантай 24 цагийн дотор холбогдох болно. Баярлалаа!</p>
           </div>
           <button onClick={() => setActiveModal(null)} className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black">Хаах</button>
         </div>
@@ -314,7 +312,7 @@ const App: React.FC = () => {
       {/* Hero Section */}
       <section id="home" className="relative pt-40 pb-20 lg:pt-56 lg:pb-36 overflow-hidden">
         <div className="absolute top-0 right-0 -z-10 w-2/3 h-full bg-gradient-to-bl from-brand-50/50 via-transparent to-transparent rounded-bl-[200px]"></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full pointer-events-none opacity-[0.03] select-none text-[30rem] font-black flex items-center justify-center text-slate-900 overflow-hidden leading-none uppercase">SIS</div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full pointer-events-none opacity-[0.03] select-none text-[25rem] font-black flex items-center justify-center text-slate-900 overflow-hidden leading-none uppercase">SIS</div>
 
         <div className="container mx-auto px-6">
           <div className="flex flex-col lg:flex-row items-center gap-16 lg:gap-24">
@@ -328,7 +326,7 @@ const App: React.FC = () => {
                 <Sparkles size={16} className="text-brand-500 animate-pulse" /> ТАНЫ БИЗНЕСИЙН ҮНЭТ ТУСЛАГЧ
               </div>
               <h1 className="text-6xl lg:text-[5.5rem] font-black text-slate-900 leading-[1.05] tracking-tight">
-                Бизнесийн үнэнч <span className="text-brand-600 inline-block">SIS</span> туслагч
+                Бизнесийн үнэнч <span className="text-brand-600">SIS</span> туслагч
               </h1>
               <p className="text-xl lg:text-2xl text-slate-600 leading-relaxed max-w-2xl font-medium">
                 10 жил тасралтгүй ажиллаж туршигдсан чанар. Шинэ технологи болгоныг цаг алдалгүй нэвтрүүлдэг хүчирхэг баг хамт олон таны бизнест шууд үр дүн амлаж байна.
@@ -347,21 +345,6 @@ const App: React.FC = () => {
                   Зөвлөгөө авах
                 </button>
               </div>
-              
-              <div className="grid grid-cols-3 gap-10 pt-10 border-t border-slate-200/60">
-                <div>
-                  <div className="text-3xl font-black text-slate-900">10+ Жил</div>
-                  <div className="text-slate-500 text-sm font-bold uppercase tracking-wider mt-1">Туршлага</div>
-                </div>
-                <div>
-                  <div className="text-3xl font-black text-slate-900">110+</div>
-                  <div className="text-slate-500 text-sm font-bold uppercase tracking-wider mt-1">Хүргэлтийн баг</div>
-                </div>
-                <div>
-                  <div className="text-3xl font-black text-slate-900">97%</div>
-                  <div className="text-slate-500 text-sm font-bold uppercase tracking-wider mt-1">Амжилт</div>
-                </div>
-              </div>
             </motion.div>
 
             <motion.div 
@@ -377,7 +360,6 @@ const App: React.FC = () => {
                     className="w-full h-auto" 
                   />
                </div>
-               
                <motion.div 
                  animate={{ y: [0, -15, 0] }}
                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
@@ -396,66 +378,41 @@ const App: React.FC = () => {
         </div>
       </section>
 
-      {/* Intro Section */}
-      <section className="py-32 bg-white relative overflow-hidden">
-        <div className="container mx-auto px-6">
-          <div className="flex flex-col lg:flex-row items-center gap-20">
-            <div className="lg:w-1/3">
-              <h2 className="text-4xl lg:text-5xl font-black text-slate-900 leading-tight">Бидний тухай <br/><span className="text-brand-600">Товчхон</span></h2>
-              <div className="w-20 h-2 bg-brand-600 mt-8 rounded-full"></div>
-            </div>
-            <div className="lg:w-2/3">
-              <p className="text-2xl lg:text-3xl text-slate-700 leading-relaxed font-medium italic border-l-8 border-brand-50 pl-8 lg:pl-12">
-                "Манай хамт олон 10 жил тасралтгүй цахим худалдааны Platform хөгжүүлж, шинэ технологиудыг амжилттай нэвтрүүлэн ажиллаж байна. Бид хүргэлт түгээлтийн хүчирхэг баг хамт олонтой бөгөөд бараа бүтээгдэхүүний удирдлага, захиалга, AI бүртгэл, мессэнжер систем болон операторын хяналтын цогц системийг санал болгож байна."
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Features Section */}
-      <section id="features" className="py-32 relative">
+      <section id="features" className="py-32 relative bg-white">
         <div className="container mx-auto px-6">
           <div className="text-center max-w-3xl mx-auto mb-20 space-y-5">
-            <span className="text-brand-600 font-black text-sm uppercase tracking-[0.3em]">Давуу талууд</span>
-            <h2 className="text-4xl lg:text-6xl font-black text-slate-900">Бизнест тань зориулсан шийдлүүд</h2>
+            <span className="text-brand-600 font-black text-sm uppercase tracking-[0.3em]">Шийдлүүд</span>
+            <h2 className="text-4xl lg:text-6xl font-black text-slate-900 tracking-tight">Бид юу санал болгодог вэ?</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             <FeatureCard icon={Bot} title="Facebook AI Agent" desc="Facebook Messenger дээр хэрэглэгчтэй харилцаж, шууд захиалга үүсгэж өгөх ухаалаг туслагч." />
-            <FeatureCard icon={MessageSquare} title="Comment-to-Order AI" desc="Постны комментонд AI хариулт өгөх ба дугаар бүртгэгдсэн бол системд шууд захиалга болгон бүртгэнэ." />
-            <FeatureCard icon={LayoutDashboard} title="Messenger нэгдсэн систем" desc="SIS систем дээрээс фэйсбүүк хуудасныхаа бүх чатыг нэг дороос хянах, хариулах боломжтой." />
-            <FeatureCard icon={PhoneCall} title="CallPro Интеграц" desc="Хэн залгасан, ямар яриа өрнөсөн, хэдэн минут ярьсан зэрэг бүх мэдээллийг системээс харна." />
-            <FeatureCard icon={Globe} title="Цахим дэлгүүр" desc="Өөрийн гэсэн вэбсайт, цахим дэлгүүртэй болж, борлуулалтаа онлайн орчинд тэлэх боломж." />
-            <FeatureCard icon={Zap} title="Smart Boost Link" desc="Вэбсайтны бүтээгдэхүүний линкийг ашиглан фэйсбүүк дээрээ гоёмсог дизайнтай борлуулалтын линк үүсгэх." />
+            <FeatureCard icon={MessageSquare} title="Comment-to-Order AI" desc="Постны комментонд AI хариулт өгөх ба дугаар бүртгэгдсэн бол системд шууд захиалга үүсгэнэ." />
+            <FeatureCard icon={PhoneCall} title="CallPro Интеграц" desc="Хэн залгасан, ямар яриа өрнөсөн зэрэг бүх мэдээллийг системээсээ шууд хянах боломж." />
             <FeatureCard icon={Warehouse} title="Агуулахын хяналт" desc="Барааны үлдэгдэл, санхүүгийн тооцоолол, агуулахын бүрэн хяналтыг системээр удирдах." />
-            <FeatureCard icon={ShoppingCart} title="SIS POS Үйлчилгээ" desc="Та өөрийн дэлгүүр дээрээ SIS-ийн ПОС системийг ашиглан борлуулалтаа хөтлөх боломжтой." />
-            <FeatureCard icon={Truck} title="Хүргэлтийн нэгдсэн шийдэл" desc="Өөрийн хүргэлтийн баг эсвэл манай 'Очлоо' хүргэлтийн сүлжээг бүрэн ашиглаж, тооцоогоо нэгтгэх." />
-            <FeatureCard icon={ShieldCheck} title="97% Хүргэлтийн чанар" desc="10 жилийн туршлага дээр суурилсан, 97 хувийн гүйцэтгэлийн чанартай хүргэлтийн үйлчилгээ." />
-            <FeatureCard icon={MapPin} title="87 Бүсчлэлийн сүлжээ" desc="Хотыг 87 жижиг бүсэд хуваан, өдөр бүр 110+ хүргэлтийн ажилтан тогтмол гаргаж үйлчилдэг." />
-            <FeatureCard icon={Package} title="COD - Төлбөрийн шийдэл" desc="Барааг хүргэж өгөөд төлбөрийг бэлнээр болон картаар авч, таны дансанд шуурхай шилжүүлэх үйлчилгээ." />
+            <FeatureCard icon={Truck} title="Хүргэлтийн нэгдсэн шийдэл" desc="Манай 'Очлоо' хүргэлтийн сүлжээг ашиглан 97%-ийн амжилттай хүргэлт хийлгэх." />
+            <FeatureCard icon={Package} title="COD - Төлбөрийн шийдэл" desc="Барааг хүргэж өгөөд төлбөрийг бэлнээр болон картаар авч таны дансанд шуурхай шилжүүлнэ." />
           </div>
         </div>
       </section>
 
-      {/* AI Simulation Section */}
+      {/* AI Simulation / Demo Section */}
       <section id="demo" className="py-32 bg-slate-900 text-white relative overflow-hidden">
         <div className="container mx-auto px-6 relative z-10">
           <div className="flex flex-col lg:flex-row items-center gap-20">
             <div className="lg:w-1/2 space-y-10">
               <span className="text-brand-400 font-black text-sm uppercase tracking-[0.4em]">Туршиж үзэх</span>
-              <h2 className="text-5xl lg:text-7xl font-black leading-[1.1]">SIS AI туслахтай <span className="text-brand-500">харилцаж</span> үзнэ үү</h2>
-              <p className="text-slate-400 text-xl">Бидний AI таны бизнесийн мэдээллийг сурч, хэрэглэгчдэд 24/7 хариулахад бэлэн болсон.</p>
-              <div className="space-y-6">
-                <div className="flex items-start gap-5">
-                   <div className="w-12 h-12 bg-brand-500/20 text-brand-400 rounded-2xl flex items-center justify-center shrink-0 border border-brand-500/30">
-                     <Headphones size={24} />
-                   </div>
-                   <div>
-                     <h4 className="text-xl font-bold mb-2">Монголоор маш сайн ярьдаг</h4>
-                     <p className="text-slate-400 leading-relaxed">Манай AI Монгол хэлний зүй тогтол, ярианы хэв маягийг бүрэн ойлгодог.</p>
-                   </div>
-                </div>
+              <h2 className="text-5xl lg:text-7xl font-black leading-[1.1]">SIS AI-тай <br/><span className="text-brand-500">харилцаад</span> үз</h2>
+              <p className="text-slate-400 text-xl font-medium">Манай AI таны бизнесийн мэдээллийг сурч, хэрэглэгчдэд 24/7 хариулахад бэлэн болсон.</p>
+              <div className="flex items-start gap-5">
+                 <div className="w-14 h-14 bg-brand-500/20 text-brand-400 rounded-2xl flex items-center justify-center shrink-0 border border-brand-500/30">
+                   <Headphones size={28} />
+                 </div>
+                 <div>
+                   <h4 className="text-xl font-bold mb-2">Монголоор чөлөөтэй ярьдаг</h4>
+                   <p className="text-slate-400 leading-relaxed">Монгол хэлний зүй тогтол, ярианы хэв маягийг бүрэн ойлгож, зөв хариулт өгнө.</p>
+                 </div>
               </div>
             </div>
             <div className="lg:w-1/2 w-full">
@@ -468,7 +425,7 @@ const App: React.FC = () => {
                       key={i} 
                       className={`flex ${msg.role === 'ai' ? 'justify-start' : 'justify-end'}`}
                     >
-                      <div className={`p-5 rounded-2xl max-w-[85%] font-medium ${msg.role === 'ai' ? 'bg-slate-700/50 rounded-tl-none border border-slate-600' : 'bg-brand-600 rounded-tr-none shadow-lg shadow-brand-900/20'}`}>
+                      <div className={`p-5 rounded-2xl max-w-[85%] font-medium ${msg.role === 'ai' ? 'bg-slate-700/50 rounded-tl-none border border-slate-600' : 'bg-brand-600 rounded-tr-none shadow-lg'}`}>
                         {msg.text}
                       </div>
                     </motion.div>
@@ -477,7 +434,7 @@ const App: React.FC = () => {
                     <div className="flex justify-start">
                       <div className="bg-slate-700/50 p-4 rounded-2xl rounded-tl-none border border-slate-600 flex gap-2 items-center">
                         <Loader2 className="animate-spin text-brand-400" size={16} />
-                        <span className="text-xs text-slate-400 uppercase font-bold tracking-widest">SIS Agent бичиж байна...</span>
+                        <span className="text-xs text-slate-400 uppercase font-bold tracking-widest">SIS Agent хариулж байна...</span>
                       </div>
                     </div>
                   )}
@@ -487,7 +444,7 @@ const App: React.FC = () => {
                   <input 
                     value={demoInput}
                     onChange={(e) => setDemoInput(e.target.value)}
-                    className="flex-grow h-16 bg-slate-900/50 rounded-2xl border border-slate-700 flex items-center px-6 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all text-white" 
+                    className="flex-grow h-16 bg-slate-900/50 rounded-2xl border border-slate-700 flex items-center px-6 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all text-white placeholder-slate-500" 
                     placeholder="Системийн талаар асуух зүйлээ бичнэ үү..." 
                   />
                   <button type="submit" disabled={isTyping} className="w-16 h-16 bg-brand-600 rounded-2xl flex items-center justify-center text-white active:scale-95 transition-all disabled:opacity-50">
@@ -501,11 +458,11 @@ const App: React.FC = () => {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-32 relative overflow-hidden">
-        <div className="container mx-auto px-6 text-center">
-          <div className="max-w-3xl mx-auto mb-20 space-y-5">
-            <span className="text-brand-600 font-black text-sm uppercase tracking-[0.3em]">Үйлчилгээний түвшин</span>
-            <h2 className="text-4xl lg:text-6xl font-black text-slate-900">ERP Хөгжүүлэлтийн шатууд</h2>
+      <section id="pricing" className="py-32 relative bg-slate-50">
+        <div className="container mx-auto px-6">
+          <div className="text-center max-w-3xl mx-auto mb-20 space-y-5">
+            <span className="text-brand-600 font-black text-sm uppercase tracking-[0.3em]">Үйлчилгээ</span>
+            <h2 className="text-4xl lg:text-6xl font-black text-slate-900 tracking-tight">ERP Хөгжүүлэлтийн шатууд</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -542,36 +499,6 @@ const App: React.FC = () => {
         </div>
       </section>
 
-      {/* Partner Section */}
-      <section id="partner" className="py-24 bg-slate-50">
-        <div className="container mx-auto px-6">
-          <div className="flex flex-col lg:flex-row gap-20 items-center">
-             <div className="lg:w-1/2">
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="bg-white p-8 rounded-3xl shadow-lg border border-slate-100 text-center">
-                    <div className="text-3xl font-black text-brand-600">87</div>
-                    <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2">Бүсчлэл</div>
-                  </div>
-                  <div className="bg-white p-8 rounded-3xl shadow-lg border border-slate-100 text-center">
-                    <div className="text-3xl font-black text-brand-600">110+</div>
-                    <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2">Ажилтан</div>
-                  </div>
-                </div>
-             </div>
-             <div className="lg:w-1/2 space-y-8">
-               <h2 className="text-4xl lg:text-5xl font-black text-slate-900">Стратегийн түнш</h2>
-               <p className="text-xl text-slate-600 leading-relaxed font-medium">Бид зөвхөн систем өгөөд зогсохгүй, таны бизнесийн өсөлтийг хариуцна.</p>
-               <button 
-                onClick={() => setActiveModal('contact')}
-                className="flex items-center gap-4 text-brand-600 font-black text-lg group active:scale-95 transition-all"
-               >
-                 Хамтран ажиллах санал илгээх <ArrowRight className="group-hover:translate-x-2 transition-transform" />
-               </button>
-             </div>
-          </div>
-        </div>
-      </section>
-
       {/* Footer */}
       <footer id="contact" className="bg-slate-900 pt-32 pb-16 text-white">
         <div className="container mx-auto px-6">
@@ -581,7 +508,9 @@ const App: React.FC = () => {
                 <div className="w-12 h-12 bg-brand-600 rounded-2xl flex items-center justify-center text-white font-black text-2xl">S</div>
                 <span className="text-2xl font-black tracking-tighter uppercase">SIS <span className="text-brand-600">Agent</span></span>
               </div>
-              <p className="text-slate-400 font-medium">10 жилийн туршлагатай хамт олон.</p>
+              <p className="text-slate-400 font-medium leading-relaxed">
+                10 жилийн туршлагатай хамт олон таны бизнест шинэ үеийн технологийн шийдлүүдийг санал болгож байна.
+              </p>
             </div>
             
             <div className="space-y-8">
@@ -589,14 +518,16 @@ const App: React.FC = () => {
                <ul className="space-y-4 text-slate-400 font-medium">
                  <li><button onClick={() => scrollTo('features')} className="hover:text-brand-400 transition-colors">ERP Систем</button></li>
                  <li><button onClick={() => scrollTo('demo')} className="hover:text-brand-400 transition-colors">AI Чат туслах</button></li>
+                 <li><button onClick={() => scrollTo('pricing')} className="hover:text-brand-400 transition-colors">Үнийн санал</button></li>
                </ul>
             </div>
 
             <div className="space-y-8">
                <h4 className="text-xl font-black">Бүтээгдэхүүн</h4>
                <ul className="space-y-4 text-slate-400 font-medium">
-                 <li><a href="https://emall.mn" target="_blank" className="hover:text-brand-400 transition-colors">Emall.mn</a></li>
-                 <li><button onClick={() => setActiveModal('signup')} className="hover:text-brand-400 transition-colors">Очлоо Апп</button></li>
+                 <li><a href="https://emall.mn" target="_blank" className="flex items-center gap-2 hover:text-brand-400 transition-colors">Emall.mn <ExternalLink size={14} /></a></li>
+                 <li><button onClick={() => setActiveModal('contact')} className="hover:text-brand-400 transition-colors">Очлоо Апп</button></li>
+                 <li><button onClick={() => setActiveModal('contact')} className="hover:text-brand-400 transition-colors">Drive Апп</button></li>
                </ul>
             </div>
 
@@ -605,16 +536,23 @@ const App: React.FC = () => {
                <ul className="space-y-6 text-slate-400 font-medium">
                  <li className="flex gap-4 items-center">
                    <Phone size={20} className="text-brand-500" />
-                   <span>+976 7700-0000</span>
+                   <span>+976 7700-XXXX</span>
                  </li>
                  <li className="flex gap-4 items-center">
                    <Mail size={20} className="text-brand-500" />
                    <span>info@sis.mn</span>
                  </li>
+                 <li className="flex gap-4 items-center">
+                   <MapPin size={20} className="text-brand-500" />
+                   <span>Улаанбаатар, Монгол улс</span>
+                 </li>
                </ul>
             </div>
           </div>
-          <p className="pt-16 text-center text-slate-500 text-sm font-bold uppercase tracking-widest">© 2024 SIS AGENT. БҮХ ЭРХ ХУУЛИАР ХАМГААЛАГДСАН.</p>
+          <div className="pt-16 flex flex-col md:flex-row justify-between items-center gap-8">
+            <p className="text-slate-500 text-sm font-bold uppercase tracking-widest">© 2024 SIS AGENT. БҮХ ЭРХ ХУУЛИАР ХАМГААЛАГДСАН.</p>
+            <div className="text-slate-400 font-bold text-sm">brosoft.space дээр байршуулсан</div>
+          </div>
         </div>
       </footer>
 
@@ -633,6 +571,12 @@ const App: React.FC = () => {
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #475569; }
+        .glass-nav {
+          background: rgba(255, 255, 255, 0.85);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border-bottom: 1px solid rgba(241, 245, 249, 1);
+        }
       `}} />
     </div>
   );
